@@ -31,7 +31,21 @@ async function run (){
         const productsCollection = db.collection('products')
     //Post a new product API
 
-    
+    app.post("/products", async (req, res) => {
+  try {
+    const newProduct = req.body;
+
+    newProduct.createdAt = new Date();
+
+    const result = await productsCollection.insertOne(newProduct);
+    res.status(201).send(result);
+  } catch (error) {
+    console.error("Error inserting product:", error);
+    res.status(500).send({ message: "Failed to insert product" });
+  }
+});
+
+
 
 
 
