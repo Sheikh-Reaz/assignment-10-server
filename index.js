@@ -78,17 +78,93 @@ async function run (){
 });
 
 //My import 
-app.post("/myImport", async(req,res)=>{
+app.post("/myImport", async (req, res) => {
   try {
-     const newImport = req.body;
-     const result = await myImportCollection.insertOne(newImport);
-     res.status(201).send(result);
-  }
-  catch (error) {;
-    res.status(500).send({ message: "Failed to insert product" });
-  }
-} )
+    const newImport = req.body;
+    const { user_email, product_name, imported_quantity } = newImport;
 
+    if (!user_email || !product_name) {
+      return res.status(400).send({ message: "Missing required fields" });
+    }
+
+    // Check if product already exists for this user
+    const existing = await myImportCollection.findOne({
+      user_email,
+      product_name
+    });
+
+    if (existing) {
+      // Update quantity instead of adding a new entry
+      const updatedQuantity =
+        existing.imported_quantity + (imported_quantity || 1);
+
+      const updateResult = await myImportCollection.updateOne(
+        { _id: existing._id },
+        { $set: { imported_quantity: updatedQuantity } }
+      );
+
+      return res.send({
+        message: "Quantity updated",
+        updated: true,
+        updateResult
+      });
+    }
+
+    // Insert new import if not found
+    const result = await myImportCollection.insertOne({
+      ...newImport,
+      createdAt: new Date()
+    });
+
+    res.status(201).send({
+      message: "Product imported successfully",
+      inserted: true,
+      result
+    });
+
+  } catch (error) {
+    res.status(500).send({
+      message: "Failed to insert or update product",
+      error
+    });
+  }
+});
+
+
+// My import get API
+// GET: Fetch all imported products for a specific user
+app.get("/myImport", async (req, res) => {
+  try {
+    const userEmail = req.query.email;
+
+    if (!userEmail) {
+      return res.status(400).send({ message: "User email is required" });
+    }
+
+    const result = await myImportCollection
+      .find({ user_email: userEmail })
+      .toArray();
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to fetch imports", error });
+  }
+});
+
+// DELETE: Remove imported product by ID
+app.delete("/myImport/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const result = await myImportCollection.deleteOne({
+      _id: new ObjectId(id),
+    });
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Failed to delete import", error });
+  }
+});
 
 
 
