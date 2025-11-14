@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
@@ -29,6 +29,7 @@ async function run (){
 
         const db =client.db('assignment_10');
         const productsCollection = db.collection('products')
+        const myImportCollection = db.collection('myimport')
     //Post a new product API
 
     app.post("/products", async (req, res) => {
@@ -39,8 +40,7 @@ async function run (){
 
     const result = await productsCollection.insertOne(newProduct);
     res.status(201).send(result);
-  } catch (error) {
-    console.error("Error inserting product:", error);
+  } catch (error) {;
     res.status(500).send({ message: "Failed to insert product" });
   }
 });
@@ -58,6 +58,36 @@ async function run (){
         const products = await productsCollection.find().toArray();
         res.send(products)
     })
+    app.get("/productDetails/:id", async(req,res)=>{
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await productsCollection.findOne(query);
+             res.send(result);
+    });
+    app.patch("/products/:id", async (req, res) => {
+  const id = req.params.id;
+  const updateProduct = req.body;
+  const query = { _id: new ObjectId(id) };
+  const update = {
+    $set: {
+      available_quantity: updateProduct.available_quantity,
+    },
+  };
+  const result = await productsCollection.updateOne(query, update);
+  res.send(result);
+});
+
+//My import 
+app.post("/myImport", async(req,res)=>{
+  try {
+     const newImport = req.body;
+     const result = await myImportCollection.insertOne(newImport);
+     res.status(201).send(result);
+  }
+  catch (error) {;
+    res.status(500).send({ message: "Failed to insert product" });
+  }
+} )
 
 
 
